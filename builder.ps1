@@ -275,6 +275,10 @@ $var_Bat_Button.add_Click({
     $var_OUTPUT_BOX.Text += "BAT Built`n"
 })
 
+$var_OUTPUT_BOX.add_TextChanged({
+    $var_OUTPUT_BOX.ScrollToEnd()
+})
+
 $var_OUTPUT_BOX.Text += "Successfully Started`n"
 Remove-Item -Path .\output\payload.ps1 -Force -ErrorAction SilentlyContinue
 Hide-Console #Makes it look nice
